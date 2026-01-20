@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shashlik Menu Search</title>
+   <style>
+        :root {
+            --primary: #9b1c1c; 
+            --gold: #c5a059;
+            --bg: #f9f9f9;
+            --card-bg: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Geeza Pro", sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+        }
+        .app-container { max-width: 500px; margin: 0 auto; padding: 20px; }
+        .search-box { position: sticky; top: 10px; z-index: 100; margin-bottom: 20px; }
+        #searchInput {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: right;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .card-content h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
+        .card-content span { font-size: 0.8rem; color: var(--text-muted); }
+        .card-price { color: var(--primary); font-weight: 700; background: #fff5f5; padding: 4px 8px; border-radius: 6px; }
+        .modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal.active { display: flex; }
+        .modal-body {
+            background: white; width: 100%; max-width: 350px; border-radius: 20px;
+            padding: 25px; position: relative; text-align: right;
+        }
+        #m-title { color: var(--primary); margin-top: 10px; }
+        #m-desc { color: #444; font-size: 0.95rem; line-height: 1.6; margin: 15px 0; }
+        #m-price { background: var(--primary); color: white; padding: 10px; text-align: center; border-radius: 10px; font-weight: bold; }
+        .close-btn { position: absolute; left: 15px; top: 15px; background: #eee; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header style="text-align: center; padding: 20px 0;">
+            <h1 style="color: var(--primary); margin: 0;">Shashlik Menu</h1>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="ابحث عن صنف... (Search...)">
+        </div>
+
+        <div id="resultsList">
+            <p style="text-align: center; color: #999; margin-top: 40px;">ابدأ الكتابة للبحث في القائمة...</p>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal" onclick="closeModal()">
+        <div class="modal-body" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <h2 id="m-title"></h2>
+            <p id="m-desc"></p>
+            <div id="m-price"></div>
+        </div>
+    </div>
+
+    <script>
+        // FULL DATA FROM YOUR SOURCE
+        const menuItems = [
+             // Soups
+    { id: 1, nameAr: 'ازوجلين', nameEn: 'Ezo Gelin', searchTerms: ['ازوجلين', 'شوربة', 'عدس', 'برغل', 'ezo', 'gelin', 'soup', 'lentil'], price: '120 LE', category: 'Soups', ingredients: 'شوربة العدس الاحمر والبرغل بمذاقها الاصيل - Traditional red lentil and bulgur soup' },
+    { id: 2, nameAr: 'كريمة الدجاج بالمشروم', nameEn: 'Kremalı Mantarlı Tavuk', searchTerms: ['كريمة', 'دجاج', 'مشروم', 'شوربة', 'kremalı', 'tavuk', 'chicken', 'mushroom', 'cream'], price: '165 LE', category: 'Soups', ingredients: 'فيليه من صدور الدجاج، كريمة، حليب، مشروم طازج والبهرات التركية - Chicken breast fillet, cream, milk, fresh mushrooms, and Turkish spices' },
+    { id: 3, nameAr: 'شوربة شاشلك', nameEn: 'Şhaşhlık çorbasi', searchTerms: ['شوربة', 'شاشلك', 'لحم', 'فيليه', 'حمص', 'shashlak', 'soup', 'beef'], price: '175 LE', category: 'Soups', ingredients: 'لحم الفيلية مع الحمص، كريمة الحليب، بهارات تركية - Beef Fillet with chickpeas, cream, milk, Turkish spices' },
+    { id: 4, nameAr: 'شوربة لسان عصفور', nameEn: 'Arpa Şehriye Çorbası', searchTerms: ['لسان', 'عصفور', 'شوربة', 'arpa', 'sehriye', 'soup'], price: '120 LE', category: 'Soups', ingredients: 'قطعة من لحم الفيليه مع اللسان بمذاقها الأصيل - A piece of fillet meat with tongue with its authentic taste' },
+
+    // Cold Meze
+    { id: 5, nameAr: 'حمص', nameEn: 'Humus', searchTerms: ['حمص', 'hummus', 'humus', 'لوز'], price: '99-155 LE', category: 'Cold Meze', ingredients: 'حمص معد علي الطريقة التركية مع زيت الزيتون البكر و شرائح اللوز - Hummus prepared in Turkish style with extra virgin olive oil and sliced almonds' },
+    { id: 6, nameAr: 'سلطة الباذنجان', nameEn: 'Patlıcan Salatası', searchTerms: ['سلطة', 'باذنجان', 'patlican', 'salata', 'eggplant'], price: '99-155 LE', category: 'Cold Meze', ingredients: 'قطع الباذنجان المشوي مع الفلفل الحلو المتبل بزيت الزيتون البكر ودبس الرمان - Grilled eggplant slices with sweet peppers, seasoned with extra virgin olive oil and pomegranate molasses' },
+    { id: 7, nameAr: 'اباغانوس', nameEn: 'Abaganus', searchTerms: ['اباغانوس', 'باذنجان', 'لبنة', 'abaganus', 'eggplant', 'labneh'], price: '130-199 LE', category: 'Cold Meze', ingredients: 'قطع باذنجان مشوية ممزوجة باللبنة التركية ومتبلة بزيت الزيتون البكر مع شرائح اللوز - Grilled eggplant pieces mixed with Turkish labneh and seasoned with extra virgin olive oil with sliced almonds' },
+    { id: 8, nameAr: 'بمبي سلطان', nameEn: 'Sultan Pembesi', searchTerms: ['بمبي', 'سلطان', 'بنجر', 'لبنة', 'sultan', 'pembesi', 'beets'], price: '130-199 LE', category: 'Cold Meze', ingredients: 'بنجر مشوي ممزوج مع اللبنة التركية و متبل بزيت الزيتون البكر - Grilled beets mixed with Turkish labneh and seasoned with extra virgin olive oil' },
+    { id: 9, nameAr: 'هايداري', nameEn: 'Haydari', searchTerms: ['هايداري', 'زبادي', 'haydari', 'yogurt'], price: '120-199 LE', category: 'Cold Meze', ingredients: 'زبادي مصفي تركي، جزر، زبيب، ثوم، شبت، زيت زيتون - Turkish strained yogurt, carrots, raisins, garlic, dill, olive oil' },
+    { id: 10, nameAr: 'لبنة مكدوس', nameEn: 'Labneli Makdous', searchTerms: ['لبنة', 'مكدوس', 'labneli', 'makdous'], price: '130-199 LE', category: 'Cold Meze', ingredients: 'قطع من المكدوس ممزوجة باللبنة التركية المتبلة بزيت الزيتون البكر مع عين الجمل - Pieces of pickled eggplant mixed with Turkish labneh, seasoned with extra virgin olive oil and walnuts' },
+    { id: 11, nameAr: 'سوزمي', nameEn: 'Suzme yogurt', searchTerms: ['سوزمي', 'لبنة', 'suzme', 'yogurt'], price: '165-250 LE', category: 'Cold Meze', ingredients: 'لبنة معدة علي الطريقة التركية وزيت الزيتون البكر - Labneh prepared in the Turkish style and virgin olive oil' },
+    { id: 12, nameAr: 'لبنة بالشومر', nameEn: 'Kabak Salatası', searchTerms: ['لبنة', 'شومر', 'kabak', 'salata', 'fennel'], price: '130-199 LE', category: 'Cold Meze', ingredients: 'سلطة الشومر الممزوجة باللبنة التركية والمتبلة بزيت الزيتون البكر مع الفستق - Fennel salad mixed with Turkish labneh, seasoned with extra virgin olive oil and pistachios' },
+    { id: 13, nameAr: 'صوصلو', nameEn: 'Soslu', searchTerms: ['صوصلو', 'باذنجان', 'طماطم', 'soslu', 'eggplant'], price: '95-135 LE', category: 'Cold Meze', ingredients: 'مكعبات رقيقة من الباذنجان مغلفة بخلاصة الطماطم وزيت الزيتون - Thin cubes of eggplant coated with tomato extract and olive oil' },
+    { id: 14, nameAr: 'جاجيك', nameEn: 'Çacik', searchTerms: ['جاجيك', 'زبادي', 'خيار', 'cacik', 'yogurt', 'cucumber'], price: '120-199 LE', category: 'Cold Meze', ingredients: 'زبادي تركي مصفي ممزوج مع ثوم، خيار، نعناع جاف و المكسرات - Strained Turkish yogurt mixed with garlic, cucumber, dried mint and nuts' },
+    { id: 15, nameAr: 'ورق عنب', nameEn: 'Yaprak Sarma', searchTerms: ['ورق', 'عنب', 'yaprak', 'sarma', 'grape', 'leaves'], price: '99-199 LE', category: 'Cold Meze', ingredients: 'ورق عنب مع الخضروات والارز المتبل بزيت الزيتون البكر والبهارات التركية - Grape leaves with vegetables and rice seasoned with virgin olive oil and Turkish spices' },
+
+    // Salads
+    { id: 16, nameAr: 'سلطة الدجاج', nameEn: 'Piliçli Salataşı', searchTerms: ['سلطة', 'دجاج', 'pilicli', 'salata', 'chicken', 'salad'], price: '279 LE', category: 'Salads', ingredients: 'سلطة الدجاج المشوي تقدم مع الخس والطماطم والزيتون الاخضر وصلصة المايونيز و جبن بارميزان - Grilled chicken salad served with lettuce, tomatoes, olives, mayonnaise sauce and parmesan cheese' },
+    { id: 17, nameAr: 'سلطة الزيتين', nameEn: 'Zayten Salataşı', searchTerms: ['سلطة', 'زيتين', 'زيتون', 'zayten', 'salata', 'olives'], price: '169 LE', category: 'Salads', ingredients: 'طماطم، زيتون أسود، زيتون أخضر، فلفل ألوان، جزر، طماطم، زيت زيتون مع دبس الرمان - Tomatoes, black olives, green olives, bell peppers, carrots, olive oil with pomegranate molasses' },
+    { id: 18, nameAr: 'تبولة', nameEn: 'Taboulah', searchTerms: ['تبولة', 'برغل', 'بقدونس', 'taboulah', 'tabbouleh', 'bulgur'], price: '159 LE', category: 'Salads', ingredients: 'مكعبات من الطماطم وقطع البصل المتبلة والبقدونس المتبلة بزيت الزيتون وعصير الليمون و البرغل - Diced tomatoes, marinated onion pieces, and seasoned parsley with olive oil and lemon juice and bulgur' },
+    { id: 19, nameAr: 'سلطة روكا مع الشمندر', nameEn: 'Pancarlı Rocca Salatası', searchTerms: ['سلطة', 'روكا', 'شمندر', 'بنجر', 'pancarli', 'rocca', 'arugula', 'beets'], price: '259 LE', category: 'Salads', ingredients: 'سلطة الجرجير مع البنجر ممزوجة بزيت الزيتون ودبس الرمان وعصر الليمون مع الجوز وجبن الماعز - Arugula and beetroot salad with olive oil, pomegranate molasses, lemon juice, walnuts and goat cheese' },
+    { id: 20, nameAr: 'سلطة الغافوردا', nameEn: 'Gavurdagi Salatası', searchTerms: ['سلطة', 'غافوردا', 'gavurdagi', 'salata'], price: '329 LE', category: 'Salads', ingredients: 'مكعبات من الطماطم وقطع البصل المتبلة مع الرمان والجوز و دبس رمان وفلفل الوان - Marinated tomato cubes and onion pieces with pomegranate, walnuts, pomegranate molasses and colored peppers' },
+    { id: 21, nameAr: 'سلطة الخضار', nameEn: 'Çoban Salataşı', searchTerms: ['سلطة', 'خضار', 'coban', 'salata', 'shepherd'], price: '119 LE', category: 'Salads', ingredients: 'سلطة الطماطم والخس والخيار وقطع من الفلفل الأخضر والفجل المتبلة بزيت الزيتون وعصير الليمون - Tomato salad, lettuce, cucumber, green pepper and radish dressed with olive oil and lemon juice' },
+    { id: 22, nameAr: 'توروس', nameEn: 'Toros Salataşı', searchTerms: ['توروس', 'جرجير', 'toros', 'salata', 'arugula'], price: '159 LE', category: 'Salads', ingredients: 'سلطة الجرجير والنعناع والبصل الاخضر والطماطم والبقدونس مخلوطة بالسماق ودبس الرمان - Arugula, mint, green onions, tomatoes and parsley mixed with sumac and pomegranate molasses' },
+    { id: 23, nameAr: 'فتوش', nameEn: 'Fattuş', searchTerms: ['فتوش', 'fattus', 'fattoush'], price: '149 LE', category: 'Salads', ingredients: 'سلطة الخس والطماطم والفلفل الأخضر والفجل متبلة بزيت الزيتون والنعناع وهريس الزيتون الأسود ودبس الرمان - Lettuce, tomato, green pepper and radish dressed with olive oil, mint, black olive puree and pomegranate molasses' },
+
+    // Hot Meze
+    { id: 24, nameAr: 'ايشلي كفتة', nameEn: 'İşli Köfte', searchTerms: ['ايشلي', 'كفتة', 'كوفتة', 'isli', 'kofte', 'kofta'], price: '350 LE', category: 'Hot Meze', ingredients: 'كرات اللحم المقلية المصنوعة من البرغل واللحم المفروم و اللوز - Fried meatballs made with bulgur, ground beef and almonds' },
+    { id: 25, nameAr: 'رقائق الدجاج', nameEn: 'Tavuk cipsi', searchTerms: ['رقائق', 'دجاج', 'tavuk', 'cipsi', 'chips', 'chicken'], price: '189 LE', category: 'Hot Meze', ingredients: 'رقائق الدجاج المتبل علي الطريقة التركية - Marinated chicken chips Turkish style' },
+    { id: 26, nameAr: 'رقائق الجبنة', nameEn: 'Peynir Cipsi', searchTerms: ['رقائق', 'جبنة', 'جبن', 'peynir', 'cipsi', 'cheese', 'chips'], price: '169 LE', category: 'Hot Meze', ingredients: 'رقائق الجبنة المشكلة - Mixed cheese chips' },
+    { id: 27, nameAr: 'سمبوسك لحمة', nameEn: 'Et samboşek', searchTerms: ['سمبوسك', 'لحمة', 'لحم', 'sambousek', 'samboşek', 'beef'], price: '249 LE', category: 'Hot Meze', ingredients: 'سمبوسك اللحم المتبلة علي الطريقة التركية - Marinated beef sambousek in Turkish style' },
+    { id: 28, nameAr: 'حلوم مشوي', nameEn: 'Halloum Izgara', searchTerms: ['حلوم', 'جبنة', 'مشوي', 'halloumi', 'grilled', 'cheese'], price: '329 LE', category: 'Hot Meze', ingredients: 'جبنة الحلوم المشوية - Grilled halloumi cheese' },
+    { id: 29, nameAr: 'مشكل فنديك', nameEn: 'Findik Uslemesi', searchTerms: ['مشكل', 'فنديك', 'فطائر', 'findik', 'uslemesi', 'pies'], price: '199 LE', category: 'Hot Meze', ingredients: 'فطائر صغيرة باللحم، الجبن، السبانخ - Small pies with beef, cheese, spinach' },
+    { id: 30, nameAr: 'كشارلي كفتة', nameEn: 'Kasarli Köfte', searchTerms: ['كشارلي', 'كفتة', 'كوفتة', 'kasarli', 'kofte'], price: '569 LE', category: 'Hot Meze', ingredients: 'كباب اللحم المفروم بحشو الجبنة مع الخضار المتبل - Minced beef kebab stuffed with cheese and spiced vegetables' },
+    { id: 31, nameAr: 'سجق بدبس الرمان', nameEn: 'Nar Pekmezli Sucuk', searchTerms: ['سجق', 'رمان', 'sucuk', 'sausage', 'pomegranate'], price: '479 LE', category: 'Hot Meze', ingredients: 'فلفل الوان، بصل، طماطم، دبس الرمان، عصير الليمون - Colored pepper, onion, tomato, pomegranate molasses, lemon juice' },
+    { id: 32, nameAr: 'كبدة بدبس الرمان', nameEn: 'karaciğeri', searchTerms: ['كبدة', 'رمان', 'karacigeri', 'liver'], price: '439 LE', category: 'Hot Meze', ingredients: 'كبدة مع فلفل الوان، بصل، طماطم، دبس الرمان وعصير الليمون - Liver with colored pepper, onion, tomato, pomegranate molasses and lemon juice' },
+    { id: 33, nameAr: 'شوب شيش', nameEn: 'Cop Şiş', searchTerms: ['شوب', 'شيش', 'cop', 'sis', 'beef'], price: '459 LE', category: 'Hot Meze', ingredients: 'قطع صغيرة من اللحم المتبلة علي الطريقة التركية - Small pieces of meat marinated in Turkish style' },
+    { id: 34, nameAr: 'كانات مشوية', nameEn: 'Tavuk kanat', searchTerms: ['كانات', 'جوانح', 'دجاج', 'اجنحة', 'tavuk', 'kanat', 'wings', 'chicken'], price: '265 LE', category: 'Hot Meze', ingredients: 'جوانح الدجاج المتبلة بالبهارات التركية - Chicken wings marinated with Turkish spices' },
+    { id: 35, nameAr: 'حمص شوب شيش', nameEn: 'Humus Cop Şiş', searchTerms: ['حمص', 'شوب', 'شيش', 'humus', 'cop', 'sis'], price: '369 LE', category: 'Hot Meze', ingredients: 'حمص معد علي الطريقة التركية يقدم مع قطع اللحم المشوية - Hummus prepared in Turkish style, served with grilled beef pieces' },
+    { id: 36, nameAr: 'حمص دونر', nameEn: 'Humus Döner', searchTerms: ['حمص', 'دونر', 'humus', 'doner'], price: '369 LE', category: 'Hot Meze', ingredients: 'حمص معد علي الطريقة التركية يقدم مع شرائح دونر اللحم - Turkish-style hummus served with slices of doner meat' },
+    { id: 37, nameAr: 'بتاتسي شوب شيش', nameEn: 'Patetesi Cop Şiş', searchTerms: ['بتاتسي', 'بطاطس', 'شوب', 'شيش', 'patetesi', 'cop', 'sis', 'potato'], price: '579 LE', category: 'Hot Meze', ingredients: 'رقائق البطاطس المقلية المتبلة مع الزبادي التركية وقطع اللحم المشوي - Seasoned fried potato chips with Turkish yogurt and grilled meat pieces' },
+    { id: 38, nameAr: 'مانتي تركي', nameEn: 'Türkçe Manti', searchTerms: ['مانتي', 'تركي', 'manti', 'turkish'], price: '469 LE', category: 'Hot Meze', ingredients: 'مانتي تركي مقلي باللحم المفروم وصوص الزبادي والزبدة - Fried Turkish manti with minced beef, yogurt and butter sauce' },
+    { id: 39, nameAr: 'دوملا دجاج', nameEn: 'Tavuk dolma', searchTerms: ['دوملا', 'دولما', 'دجاج', 'بطاطس', 'dolma', 'tavuk', 'chicken', 'potato'], price: '369 LE', category: 'Hot Meze', ingredients: 'البطاطس المحشية بالدجاج المتبل بالطريقة التركية الممزوج مع الوايت صوص المغطاه بالجبن - Potatoes stuffed with seasoned chicken, Turkish style, mixed with white sauce, and covered with cheese' },
+    { id: 40, nameAr: 'دوملا لحم', nameEn: 'Et dolma', searchTerms: ['دوملا', 'دولما', 'لحم', 'بطاطس', 'dolma', 'beef', 'potato'], price: '429 LE', category: 'Hot Meze', ingredients: 'البطاطس المحشية باللحم المتبل بالطريقة التركية الممزوج مع الوايت صوص المغطاه بالجبن - Potatoes stuffed with seasoned meat, Turkish style, mixed with white sauce, and covered with cheese' },
+
+    // Pides (Wood-fired oven pies)
+    { id: 41, nameAr: 'لهماجون بيدا', nameEn: 'Lahmacun pide', searchTerms: ['لهماجون', 'بيدا', 'lahmacun', 'pide', 'لحم'], price: '229 LE', category: 'Pides', ingredients: 'فطيرة محمصة باللحم المفروم والبهارات التركية الخاصة - Toasted pie with minced beef and special Turkish spices' },
+    { id: 42, nameAr: 'بيدا سجق بالجبنة', nameEn: 'Pide Peynirli Sucuklu', searchTerms: ['بيدا', 'سجق', 'جبنة', 'pide', 'sucuk', 'peynir', 'sausage', 'cheese'], price: '339 LE', category: 'Pides', ingredients: 'فطيرة تركية بالجبنة والسجق - Turkish pie with cheese and sausage' },
+    { id: 43, nameAr: 'كوشي باشلي بيدا', nameEn: 'Kuş Başili Pide', searchTerms: ['كوشي', 'باشلي', 'بيدا', 'kus', 'basili', 'pide', 'لحم'], price: '329 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة بقطع اللحم و فلفل ألوان و المتبلة بالبهارات التركية الخاصة - Turkish pie stuffed with pieces of meat and colored peppers, seasoned with special Turkish spices' },
+    { id: 44, nameAr: 'بينرلي بيدا', nameEn: 'Peynirli Pide', searchTerms: ['بينرلي', 'بيدا', 'جبنة', 'peynirli', 'pide', 'cheese'], price: '229 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة بالجبنة - Turkish pie stuffed with cheese' },
+    { id: 45, nameAr: 'بيدا جبنة حلوم', nameEn: 'Halloum Pide', searchTerms: ['بيدا', 'جبنة', 'حلوم', 'pide', 'halloumi', 'cheese'], price: '379 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة بجبن الحلوم - Turkish pie stuffed with halloumi cheese' },
+    { id: 46, nameAr: 'بيدا بالسبانخ', nameEn: 'Ispanaklı Pide', searchTerms: ['بيدا', 'سبانخ', 'pide', 'ispanakli', 'spinach'], price: '209 LE', category: 'Pides', ingredients: 'فطيرة بالسبانخ والبصل المكرمل والجبن على الطريقة التركية - Spinach and caramelized onion pie with Turkish style cheese' },
+    { id: 47, nameAr: 'سبزلي بيدا', nameEn: 'Sebzeli ve Peynirli Pide', searchTerms: ['سبزلي', 'بيدا', 'خضار', 'sebzeli', 'pide', 'vegetables'], price: '229 LE', category: 'Pides', ingredients: 'فطيرة تركية من الخضروات المشكلة باذنجان، فطر، حبوب الذرة مغطاة بالجبن ومشوية بالفرن - Turkish pie of mixed vegetables eggplant, mushrooms, corn kernels topped with cheese and oven roasted' },
+    { id: 48, nameAr: 'بيدا لبنة بالخضار', nameEn: 'Yoğurt Sebzeli pide', searchTerms: ['بيدا', 'لبنة', 'خضار', 'pide', 'yogurt', 'vegetables'], price: '339 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة باللبنة والخضار الطازج - Turkish pie stuffed with labneh and fresh vegetables' },
+    { id: 49, nameAr: 'كرشيك بيدا', nameEn: 'Karisik Pide', searchTerms: ['كرشيك', 'بيدا', 'مشكل', 'karisik', 'pide', 'mixed'], price: '339 LE', category: 'Pides', ingredients: 'سجق تركي، كوشي باشلي، لحم بالعجين - Turkish sausage, kushi bashli, beef with dough' },
+    { id: 50, nameAr: 'بيدا كبالي', nameEn: 'Kapali Pide', searchTerms: ['بيدا', 'كبالي', 'دونر', 'kapali', 'pide', 'doner'], price: '350 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة بشرائح اللحم الدونر والجبن - Turkish pie stuffed with sliced doner meat and cheese' },
+    { id: 51, nameAr: 'بيدا جبنة بالبيض', nameEn: 'Yumurta Peynirli Pide', searchTerms: ['بيدا', 'جبنة', 'بيض', 'pide', 'yumurta', 'peynir', 'egg', 'cheese'], price: '249 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة بالجبن والبيض - Turkish pie stuffed with cheese and eggs' },
+    { id: 52, nameAr: 'بيدا لبنة بالعسل', nameEn: 'Yoğurt Ballı pide', searchTerms: ['بيدا', 'لبنة', 'عسل', 'pide', 'yogurt', 'honey'], price: '339 LE', category: 'Pides', ingredients: 'فطيرة تركية محشوة باللبنة والعسل - Turkish pie stuffed with labneh and honey' },
+
+    // Grilled Dishes
+    { id: 53, nameAr: 'مكس جريل', nameEn: 'Karışık', searchTerms: ['مكس', 'جريل', 'مشكل', 'karisik', 'mixed', 'grill', 'طاووك', 'شاشلك', 'اورفا'], price: '599 LE', category: 'Grilled', ingredients: 'طاووك، شاشلك لحمة، اورفا كباب - Tawook, beef shashlak, urfa kebab' },
+    { id: 54, nameAr: 'مكس جريل مع ريش', nameEn: 'Şaşhlık Karışık, pirzola', searchTerms: ['مكس', 'جريل', 'ريش', 'shashlak', 'karisik', 'pirzola', 'mixed', 'chops'], price: '919 LE', category: 'Grilled', ingredients: 'طاووك، شاشلك لحمة، اورفا كباب، ريش - Tawook, beef shashlak, urfa kebab, lamb chops' },
+    { id: 55, nameAr: 'مشاوي شاشلك', nameEn: 'Şhaşhlık Karışık', searchTerms: ['مشاوي', 'شاشلك', 'shashlak', 'karisik', 'mixed'], price: '629 LE', category: 'Grilled', ingredients: 'طاووك، كباب دجاج، تريبيلي، اورفا كباب - Tawook, chicken kebab, tripilli, urfa kebab' },
+    { id: 56, nameAr: 'مشكل لحوم', nameEn: 'Et Karışık', searchTerms: ['مشكل', 'لحوم', 'لحم', 'et', 'karisik', 'mixed', 'meat'], price: '749 LE', category: 'Grilled', ingredients: 'تريبيلي، شاشلك لحمة، اورفا كباب - Tripelli, beef shashlak, urfa kebab' },
+    { id: 57, nameAr: 'دونر لحمة', nameEn: 'Et Doner', searchTerms: ['دونر', 'لحمة', 'لحم', 'doner', 'beef', 'shawarma'], price: '499 LE', category: 'Grilled', ingredients: 'يقدم مع الطحينة والبطاطس المقلية والخبز التركي - Served with sesame paste, french fries and Turkish bread' },
+    { id: 58, nameAr: 'اورفا كباب', nameEn: 'Urfa Kebap', searchTerms: ['اورفا', 'كباب', 'urfa', 'kebab', 'kebap'], price: '599 LE', category: 'Grilled', ingredients: 'كباب اللحم المفروم يدويا مع البقدونس والبهارات التركية - Handmade minced beef kebab with parsley and Turkish spices' },
+    { id: 59, nameAr: 'ادنا كباب', nameEn: 'Adna Kebap', searchTerms: ['ادنا', 'كباب', 'adna', 'kebab', 'kebap', 'حار'], price: '599 LE', category: 'Grilled', ingredients: 'كباب اللحم المفروم يدويا مع الفلفل الحار والبقدونس والبهارات التركية - Handmade minced beef kebab with chili pepper, parsley and Turkish spices' },
+    { id: 60, nameAr: 'تريبيلي', nameEn: 'Trbiyeli Şiş', searchTerms: ['تريبيلي', 'لحم', 'مكعبات', 'trbiyeli', 'terbiyeli', 'sis', 'beef'], price: '829 LE', category: 'Grilled', ingredients: 'مكعبات اللحم المشوية والمتبلة بالبهارات التركية - Grilled beef cubes marinated with Turkish spices' },
+    { id: 61, nameAr: 'مشكل دجاج', nameEn: 'Karışık Tavouk', searchTerms: ['مشكل', 'دجاج', 'karisik', 'tavuk', 'chicken', 'mixed'], price: '429 LE', category: 'Grilled', ingredients: 'طاووك، شاشلك دجاج، كباب دجاج - Tawook, chicken shashlak, chicken kebab' },
+    { id: 62, nameAr: 'كباب دجاج', nameEn: 'Tavouk Kebab', searchTerms: ['كباب', 'دجاج', 'tavuk', 'tavouk', 'kebab', 'chicken'], price: '419 LE', category: 'Grilled', ingredients: 'صدور الدجاج المفرومة والمخلوطة مع الثوم والبقدونس والبهارات التركية - Chopped and mixed chicken breasts with garlic, parsley and Turkish spices' },
+    { id: 63, nameAr: 'دجاج مسحب', nameEn: 'Kemiksiz Tavuk', searchTerms: ['دجاج', 'مسحب', 'بدون', 'عظم', 'kemiksiz', 'tavuk', 'boneless', 'chicken'], price: '429 LE', category: 'Grilled', ingredients: 'نصف دجاجة بدون عظم مشوية ومتبلة بالبهارات التركية - Half boneless chicken, grilled and marinated with Turkish spices' },
+    { id: 64, nameAr: 'شاشلك دجاج', nameEn: 'Şhaşhlık Tavouk', searchTerms: ['شاشلك', 'دجاج', 'shashlak', 'tavuk', 'tavouk', 'chicken'], price: '429 LE', category: 'Grilled', ingredients: 'شرائح الدجاج الرقيقة المتبلة والمشوية مع حلقات البصل - Thin chicken slices marinated and grilled with onion rings' },
+    { id: 65, nameAr: 'طاووك', nameEn: 'Tavouk şiş', searchTerms: ['طاووك', 'شيش', 'دجاج', 'tavuk', 'tavouk', 'sis', 'shish', 'chicken'], price: '419 LE', category: 'Grilled', ingredients: 'قطع من صدور الدجاج المشوية والمتبلة بالبهارات التركية - Pieces of grilled chicken breasts marinated with Turkish spices' },
+    { id: 66, nameAr: 'شاشلك لحمة', nameEn: 'Şhaşhlık Kebap', searchTerms: ['شاشلك', 'لحمة', 'لحم', 'shashlak', 'kebab', 'kebap', 'beef'], price: '899 LE', category: 'Grilled', ingredients: 'شرائح اللحم الرقيقة المتبلة والمشوية مع حلقات البصل - Thin slices of beef marinated and grilled with onion rings' },
+    { id: 67, nameAr: 'مشاوي عائلي', nameEn: 'Aile Izgara', searchTerms: ['مشاوي', 'عائلي', 'aile', 'izgara', 'family', 'grill'], price: '1399 LE', category: 'Grilled', ingredients: 'تشكيلة من اللحوم والدجاج المشوية والمتبلة على الطريقة التركية - A selection of grilled and marinated meats and chicken, Turkish style' },
+    { id: 68, nameAr: 'بيرزولا', nameEn: 'Pirzola', searchTerms: ['بيرزولا', 'ريش', 'ضاني', 'pirzola', 'lamb', 'chops'], price: '999 LE', category: 'Grilled', ingredients: 'ريش ضاني مشوية ومتبلة بالبهارات التركية الخاصة - Grilled lamb chops marinated with special Turkish spices' },
+
+    // Iskender Dishes
+    { id: 69, nameAr: 'اسكندر كباب', nameEn: 'İskender kebabı', searchTerms: ['اسكندر', 'كباب', 'iskender', 'kebab'], price: '689 LE', category: 'Iskender', ingredients: 'اورفا كباب مع الزبادي وصوص الاسكندر والزبدة المتبل علي الطريقة التركية - Urfa kebab with yogurt, iskander sauce and butter marinated in Turkish style' },
+    { id: 70, nameAr: 'اسكندر دونر لحمة', nameEn: 'İskender Et Donner', searchTerms: ['اسكندر', 'دونر', 'لحمة', 'iskender', 'doner', 'beef'], price: '579 LE', category: 'Iskender', ingredients: 'شاورما اللحم مع الزبادي وصوص الاسكندر والزبدة المتبل علي الطريقة التركية - Beef shawarma with yogurt and iskandar sauce and butter marinated in Turkish style' },
+    { id: 71, nameAr: 'اسكندر شاشلك', nameEn: 'İskender Şhaşhlık', searchTerms: ['اسكندر', 'شاشلك', 'iskender', 'shashlak'], price: '939 LE', category: 'Iskender', ingredients: 'شاشلك لحمة مع الزبادي وصوص الاسكندر والزبدة المتبل علي الطريقة التركية - Beef shashlak with yogurt and iskandar sauce and butter marinated in Turkish style' },
+
+    // Sizzler & Testi Dishes
+    { id: 72, nameAr: 'زسلر ريش', nameEn: 'Sizzler Tüy', searchTerms: ['زسلر', 'ريش', 'sizzler', 'lamb', 'chops'], price: '1669 LE', category: 'Wood-fired', ingredients: 'ريش اللحم المشوية والمتبلة على الطريقة التركية مع الزبدة النيوزيلاندي وبصل قاورما وطماطم شيري ومشروم فريش - Grilled and marinated lamb chops, Turkish style, with New Zealand butter, caramelized onions, cherry tomatoes, and fresh mushrooms' },
+    { id: 73, nameAr: 'زسلر تربيلي', nameEn: 'Sizzler Trbiyeli', searchTerms: ['زسلر', 'تربيلي', 'sizzler', 'terbiyeli'], price: '1249 LE', category: 'Wood-fired', ingredients: 'قطع اللحم المشوية والمتبلة علي الطريقة التركية مع الزبدة النيوزلاندي وبصل قاورما وطماطم شيري ومشروم فريش - Grilled beef pieces marinated in Turkish style with New Zealand butter' },
+    { id: 74, nameAr: 'تستي لحمة', nameEn: 'Et Testi', searchTerms: ['تستي', 'لحمة', 'لحم', 'testi', 'beef'], price: '769 LE', category: 'Wood-fired', ingredients: 'لحم متبل، فلفل الوان، بصل، طماطم، بهارات تركية يقدم مع أرز أبيض - Beef, colored pepper, onion, tomato, Turkish spices served with rice' },
+    { id: 75, nameAr: 'دجاج سوبريم', nameEn: 'Tavuk Souprem', searchTerms: ['دجاج', 'سوبريم', 'tavuk', 'souprem', 'supreme', 'chicken'], price: '529 LE', category: 'Wood-fired', ingredients: 'صدور دجاج، فلفل الوان، مشروم، وايت صوص، وجبن يقدم مع ارز ابيض - Chicken breasts, colored pepper, mushroom, white sauce, and cheese served with white rice' },
+    { id: 76, nameAr: 'تستي دجاج', nameEn: 'Tavuk Testi', searchTerms: ['تستي', 'دجاج', 'tavuk', 'testi', 'chicken'], price: '529 LE', category: 'Wood-fired', ingredients: 'صدور دجاج، فلفل الوان، بصل، طماطم، ثوم، بهارات تركية يقدم مع أرز أبيض - Chicken breasts, colored peppers, onions, tomatoes, garlic, Turkish spices served with rice' },
+    { id: 77, nameAr: 'طاجن كشارلي', nameEn: 'Kasharly Tagin', searchTerms: ['طاجن', 'كشارلي', 'tagin', 'kasharly'], price: '749 LE', category: 'Wood-fired', ingredients: 'لحم مفروم متبل بالبهارات التركية الممزوج مع الجبنة والمطهو في الفرن الحطب - Minced beef marinated with Turkish spices mixed with cheese cooked in a wood oven' },
+    { id: 78, nameAr: 'علي نازك كباب', nameEn: 'Ali Nazik Kebap', searchTerms: ['علي', 'نازك', 'كباب', 'ali', 'nazik', 'kebab'], price: '589 LE', category: 'Wood-fired', ingredients: 'اورفا كباب مع باذنجان مشوي الممزوج باللبنة التركية - Urfa kebab with grilled eggplant mixed with Turkish labneh' },
+    { id: 79, nameAr: 'مكس نازج', nameEn: 'Mix Nazk', searchTerms: ['مكس', 'نازج', 'نازك', 'mix', 'nazk', 'nazik'], price: '839 LE', category: 'Wood-fired', ingredients: 'قطع من الشوب شيش واورفا كباب مع الباذنجان المشوي الممزوج باللبنة التركية - Pieces of chopped shish and urfa kebab with grilled eggplant mixed with Turkish labneh' },
+    { id: 80, nameAr: 'طاجن سجق', nameEn: 'Sucuklu Tagin', searchTerms: ['طاجن', 'سجق', 'tagin', 'sucuk', 'sausage'], price: '699 LE', category: 'Wood-fired', ingredients: 'سجق متبل علي الطريقة التركية الممزوج مع فلفل الوان، بصل، ثوم، طماطم، فلفل حار - Marinated sausage in Turkish style mixed with colored pepper, onions, garlic, tomatoes, hot pepper' },
+    { id: 81, nameAr: 'علي نازج شيش', nameEn: 'Ali Nazej Şiş', searchTerms: ['علي', 'نازج', 'نازك', 'شيش', 'ali', 'nazej', 'nazik', 'sis'], price: '729 LE', category: 'Wood-fired', ingredients: 'قطع اللحم المشوية مع الباذنجان المشوي الممزوج باللبنة التركية - Grilled beef pieces with grilled eggplant mixed with Turkish labneh' },
+    { id: 82, nameAr: 'اوزي ضاني', nameEn: 'Ozzy', searchTerms: ['اوزي', 'ضاني', 'موزة', 'ozzy', 'lamb', 'shank'], price: '1290 LE', category: 'Wood-fired', ingredients: 'موزة اللحم الطازج المتبل والمطهو بالفرن علي الطريقة التركية يقدم مع الارز بالمكسرات - Fresh beef shank, marinated and oven-cooked in Turkish style served with rice with nuts' },
+    { id: 83, nameAr: 'كوزو بيرزولا تيبسي', nameEn: 'Kozo Perzola Tepsi', searchTerms: ['كوزو', 'بيرزولا', 'تيبسي', 'ريش', 'kozo', 'perzola', 'tepsi', 'lamb'], price: '1089 LE', category: 'Wood-fired', ingredients: 'ريش الضأن المشوية بالفرن، بصل قورما، ثوم، فلفل ألوان، طماطم، متبلة على الطريقة التركية يقدم مع أرز أبيض - Oven-roasted lamb chops, onion, garlic, bell peppers, tomatoes, seasoned in Turkish style, served with white rice' },
+    { id: 84, nameAr: 'كوزو إنجيك تيبسي', nameEn: 'Kozo Engek Tepsi', searchTerms: ['كوزو', 'انجيك', 'تيبسي', 'موزة', 'kozo', 'engek', 'tepsi', 'lamb', 'shank'], price: '1289 LE', category: 'Wood-fired', ingredients: 'موزة الضاني المطهوة بالفرن الحطب مع البصل القاورما، ثوم، فلفل ألوان، طماطم المتبلة علي الطريقة التركية تقدم مع أرز أبيض - Lamb shank cooked in a wood-fired oven with onions, garlic, bell peppers, tomatoes seasoned in the Turkish style served with white rice' },
+    { id: 85, nameAr: 'اوزو يابرك', nameEn: 'Uzum Yaprak', searchTerms: ['اوزو', 'يابرك', 'موزة', 'ورق', 'عنب', 'uzum', 'yaprak', 'lamb', 'shank'], price: '1329 LE', category: 'Wood-fired', ingredients: 'موزة اللحم الطازج المتبل والمطهو بالفرن مع ورق العنب علي الطريقة التركية - Fresh marinated and oven-cooked lamb shank with Turkish-style grape leaves' },
+
+    // Prime Steaks
+    { id: 86, nameAr: 'فيلية', nameEn: 'Füsun', searchTerms: ['فيلية', 'فيليه', 'fusun', 'fillet', 'angus'], price: '1599 LE', category: 'Prime Steaks', ingredients: 'قطعة لحم فيلية 300-350 جرام - A piece of fillet beef 300-350 grams' },
+    { id: 87, nameAr: 'كوزو كافس', nameEn: 'Kuzu Kafes', searchTerms: ['كوزو', 'كافس', 'ضلوع', 'ريش', 'kuzu', 'kafes', 'ribs', 'lamb'], price: '3099 LE', category: 'Prime Steaks', ingredients: 'أضلاع لحم الضاني المشوية في الفرن الحطب - Grilled lamb ribs in a wood oven' },
+    { id: 88, nameAr: 'توماهوك', nameEn: 'Tomahawk', searchTerms: ['توماهوك', 'tomahawk', 'steak'], price: '3200 LE', category: 'Prime Steaks', ingredients: 'شريحة لحمة توماهوك 1200 جرام - Tomahawk steak 1200 grams' },
+    { id: 89, nameAr: 'ريب اي', nameEn: 'Kaburga biftek', searchTerms: ['ريب', 'اي', 'ribeye', 'kaburga', 'biftek'], price: '1599 LE', category: 'Prime Steaks', ingredients: 'قطعة لحم ريب اي 300-350 جرام - Ribeye beef piece 300-350 grams' },
+
+    // Desserts
+    { id: 90, nameAr: 'كنافة قشطة', nameEn: 'Künefe kreması', searchTerms: ['كنافة', 'قشطة', 'kunefe', 'kunafa', 'cream'], price: '229 LE', category: 'Desserts', ingredients: 'كنافة محشوة بالجبنة تقدم مع القشطة والفستق - Kunafa stuffed with cheese served with cream and pistachios' },
+    { id: 91, nameAr: 'كنافة نوتيلا', nameEn: 'Nütella künefesi', searchTerms: ['كنافة', 'نوتيلا', 'kunefe', 'nutella'], price: '229 LE', category: 'Desserts', ingredients: 'كنافة محشوة بالجبنة تقدم مع النوتيلا والفستق - Kunafa stuffed with cheese served with Nutella and pistachios' },
+    { id: 92, nameAr: 'كنافة ايس كريم', nameEn: 'Künefe dondurması', searchTerms: ['كنافة', 'ايس', 'كريم', 'kunefe', 'ice', 'cream'], price: '229 LE', category: 'Desserts', ingredients: 'كنافة محشوة بالجبنة تقدم مع أيس كريم والفستق - Kunafa stuffed with cheese served with ice cream and pistachios' },
+    { id: 93, nameAr: 'مهلبية', nameEn: 'Puding', searchTerms: ['مهلبية', 'puding', 'pudding'], price: '99 LE', category: 'Desserts', ingredients: 'حليب مخفوق ومحضر بالفرن علي الطريقة التركية - Milkshake prepared in the oven in the Turkish style' },
+    { id: 94, nameAr: 'ارز بالحليب فرن', nameEn: 'Fırın sütlaç', searchTerms: ['ارز', 'حليب', 'فرن', 'sutlac', 'rice', 'pudding'], price: '124 LE', category: 'Desserts', ingredients: 'ارز بحليب مخفوق ومحضر بالفرن علي الطريقة التركية - Rice with whipped milk prepared in the oven in the Turkish style' },
+    { id: 95, nameAr: 'كريم كراميل', nameEn: 'Sütlaç Brulee', searchTerms: ['كريم', 'كراميل', 'sutlac', 'brulee', 'creme', 'caramel'], price: '139 LE', category: 'Desserts', ingredients: 'حليب مخفوق مع صوص الكراميل محضر علي الطريقة التركية - Milkshake with caramel sauce prepared in Turkish style' },
+    { id: 96, nameAr: 'ام علي', nameEn: 'Ümmü Ali', searchTerms: ['ام', 'علي', 'ummu', 'ali', 'om', 'ali'], price: '229 LE', category: 'Desserts', ingredients: 'حليب مخفوق مع الكريمة الطازجة ممزوجه مع الباف بستري - Milkshake with fresh cream mixed with puff pastry' },
+    { id: 97, nameAr: 'بقلاوة ايس كريم', nameEn: 'Baklava dondürma Pistachios', searchTerms: ['بقلاوة', 'ايس', 'كريم', 'فستق', 'baklava', 'ice', 'cream', 'pistachio'], price: '360 LE', category: 'Desserts', ingredients: 'رقائق البقلاوة التركية مع فستق تقدم مع دندورما تركية - Turkish baklava chips with pistachios served with Turkish ice cream' },
+    { id: 98, nameAr: 'سيمولينا', nameEn: 'Şemolina', searchTerms: ['سيمولينا', 'semolina'], price: '229 LE', category: 'Desserts', ingredients: 'حليب مخفوق مع السميدة الساخنة يقدم مع الداندورما التركية - Milkshake with hot semolina served with Turkish ice cream' },
+    { id: 99, nameAr: 'دندورما', nameEn: 'Dondurma', searchTerms: ['دندورما', 'ايس', 'كريم', 'dondurma', 'ice', 'cream'], price: '70 LE', category: 'Desserts', ingredients: 'بولة أيس كريم حسب اختيارك - Ice cream scoop according to your choice' },
+    { id: 100, nameAr: 'بقلاوة سادة', nameEn: 'Sade Baklava', searchTerms: ['بقلاوة', 'سادة', 'baklava', 'plain'], price: '35 LE', category: 'Desserts', ingredients: 'بقلاوة سادة - Plain baklava' },
+    { id: 101, nameAr: 'بقلاوة فستق', nameEn: 'Fıstıklı Baklava', searchTerms: ['بقلاوة', 'فستق', 'baklava', 'pistachio'], price: '100 LE', category: 'Desserts', ingredients: 'بقلاوة فستق - Pistachio baklava' },
+    { id: 102, nameAr: 'تري لتشي', nameEn: 'Tres Leche', searchTerms: ['تري', 'لتشي', 'tres', 'leche'], price: '185 LE', category: 'Desserts', ingredients: 'تري لتشي - Tres Leches cake' }
+        ];
+
+        const searchInput = document.getElementById('searchInput');
+        const resultsList = document.getElementById('resultsList');
+        const modal = document.getElementById('detailsModal');
+
+        function normalizeArabic(text) {
+            if (!text) return '';
+            return text.toLowerCase()
+                .replace(/[إأآا]/g, 'ا').replace(/[ىي]/g, 'ي')
+                .replace(/ة/g, 'ه').replace(/[ًٌٍَُِّْ]/g, '').trim();
+        }
+
+        function displayResults(results) {
+            if (results.length === 0) {
+                resultsList.innerHTML = `<p style="text-align: center; color: #999;">لا يوجد نتائج</p>`;
+                return;
+            }
+
+            resultsList.innerHTML = results.map(item => `
+                <div class="card" onclick="openModal(${item.id})">
+                    <div class="card-content">
+                        <h3>${item.nameAr}</h3>
+                        <span>${item.nameEn}</span>
+                    </div>
+                    <div class="card-price">${item.price}</div>
+                </div>
+            `).join('');
+        }
+
+        function openModal(id) {
+            const item = menuItems.find(i => i.id === id);
+            document.getElementById('m-title').innerText = item.nameAr;
+            document.getElementById('m-desc').innerText = item.ingredients;
+            document.getElementById('m-price').innerText = item.price;
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            const val = normalizeArabic(e.target.value);
+            if (!val) {
+                resultsList.innerHTML = `<p style="text-align: center; color: #999; margin-top: 40px;">ابدأ الكتابة للبحث...</p>`;
+                return;
+            }
+
+            const words = val.split(/\s+/);
+            const filtered = menuItems.filter(item => {
+                const combinedText = normalizeArabic(item.nameAr + item.nameEn);
+                return words.every(word => combinedText.includes(word));
+            });
+            displayResults(filtered);
+        });
+    </script>
+</body>
+</html>
